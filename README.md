@@ -9,15 +9,19 @@ O banco escolhido para esse projeto foi o RavenDB: um banco open source, NoSQL, 
 
 * [github/ravendb](https://github.com/ravendb/ravendb)
 
-## Instalando o RavenDB no Linux (Ubuntu 19.04)
+## Instalando o RavenDB no Linux (Ubuntu 19.04)*
 
 As instruções a seguir foram executadas no Ubuntu 19.04, mas devem funcionar, com algumas pequenas modificações necessárias, para qualquer distribuição Linux, em especial as baseadas em Debian (Ubuntu, Mint).
 
+<sub>* A segunda parte desse passo a passo foi feita no Linux Mint 19.1.</sub>
+
 ### Download e instalação do RavenDB
 
-#### Faça o download do RavenDB. A versão utilizada nesse projeto é 4.2.0.
+#### Faça o download do RavenDB. A versão utilizada nesse projeto é 4.2.0*.
 
 * [ravendb/download](https://ravendb.net/download)
+
+<sub>* A versão utilizada no Docker é 4.2.1</sub>
 
 #### Vá até o diretório onde o arquivo foi baixado e extraia seu conteúdo.
 
@@ -68,7 +72,7 @@ O RavenDB possui uma ferramenta para popular um banco de testes automaticamente,
 
 ### Realizando consultas
 
-Dentro do próprio *studio* do RavenDB também é possível realizar as consultas nele. Como o propósito deste projeto não é analisar individualmente as consultas, não iremos abordar essa questão a fundo. Mais para frente iremos realizar consultas em massa utilizando alguma linguagem de programação.
+Dentro do próprio *studio* do RavenDB também é possível realizar as consultas nele. Como o propósito deste projeto não é analisar individualmente as consultas, não iremos abordar essa questão a fundo, mas recomendo executar algumas *queries* e se familiarizar com o RavenDB. Mais para frente iremos realizar consultas em massa utilizando alguma linguagem de programação.
 
 ## Executando o RavenDB no Docker
 
@@ -127,7 +131,7 @@ c55ba0222c14        ravendb/ravendb     "/bin/sh -c /opt/Rav…"   14 minutes ag
 
 ```
 
-### Acessando cada nó
+### Acessando um nó no *browser*
 
 Primeiro precisamos saber o IP de cada nó. O Docker nos dá isso, basta executar o seguinte comando:
 
@@ -192,12 +196,32 @@ Tendo registrado a licença, podemos agora adicionar os nós criados ao nosso *C
 
     ![Final topology](/assets/final_topology.png)
 
+E então temos um *cluster* com três nós pronto para os testes.
 
-## Running the tests -- TEMPLATE
+## Executando os testes
 
-Explain how to run the automated tests for this system
+Os testes serão realizados no *cluster* descrito acima, rodando em uma máquina com as seguintes configurações:
 
-### Break down into end to end tests
+>I5 3570K @3.8Ghz<br>
+8gb ddr3<br>
+12gb ssd<br>
+Linux Mint 19.1 - Cinnamon<br>
+
+Configuração por nó:
+> 2 Cores @3.8Ghz<br>
+512mb ddr3<br>
+12gb ssd<br>
+ravendb/ravendb:4.2.1
+
+Configuração do cluster:
+> 3 nós<br>
+fator de replicação: 3<br>
+nível de consistência: quórum (n/2 + 1)*<br>
+
+<sub>* O RavenDB utiliza por padrão o algoritmo de quórum Raft. Não encontrei na documentação como alterar as configurações do algoritmo de quórum. Por padrão, ele está setado como (n/2)+1 nós, então os testes serão executados com essa configuração.<br>
+Ref: https://ravendb.net/docs/article-page/4.2/python/glossary/raft-algorithm</sub>
+
+### Falha nos nós e eleição do líder
 
 Explain what these tests test and why
 
@@ -205,45 +229,13 @@ Explain what these tests test and why
 Give an example
 ```
 
-### And coding style tests
+### Populando o banco com amostras aleatórias
 
-Explain what these tests test and why
+### Falha nos nós e recuperação de informação
 
-```
-Give an example
-```
+### Testes --
 
-## Deployment
+## Autores
 
-Add additional notes about how to deploy this on a live system
-
-## Built With
-
-* [Dropwizard](http://www.dropwizard.io/1.0.2/docs/) - The web framework used
-* [Maven](https://maven.apache.org/) - Dependency Management
-* [ROME](https://rometools.github.io/rome/) - Used to generate RSS Feeds
-
-## Contributing
-
-Please read [CONTRIBUTING.md](https://gist.github.com/PurpleBooth/b24679402957c63ec426) for details on our code of conduct, and the process for submitting pull requests to us.
-
-## Versioning
-
-We use [SemVer](http://semver.org/) for versioning. For the versions available, see the [tags on this repository](https://github.com/your/project/tags). 
-
-## Authors
-
-* **Billie Thompson** - *Initial work* - [PurpleBooth](https://github.com/PurpleBooth)
-
-See also the list of [contributors](https://github.com/your/project/contributors) who participated in this project.
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details
-
-## Acknowledgments
-
-* Hat tip to anyone whose code was used
-* Inspiration
-* etc
-
+- **Antonio Medeiros**: [ajmedeiros](https://github.com/ajmedeiros)
+- **Daniel Davoli**: [davolli](https://github.com/davolli)

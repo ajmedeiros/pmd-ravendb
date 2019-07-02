@@ -139,7 +139,7 @@ Para acessar a interface de cada nó através do seu *browser*, basta digitar o 
 
     http://172.17.0.X:8080
 
-Porém, não mexa em ainda ainda, pois precisamos configurar o nosso *cluster*
+Porém, não mexa em nada ainda, pois precisamos configurar o nosso *cluster*.
 
 ### Configurando o primeiro nó do Cluster
 

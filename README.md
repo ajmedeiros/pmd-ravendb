@@ -155,7 +155,7 @@ Para o primeiro nó do *Cluster*, que será o líder, faremos uma inicializaçã
 
 3. Na seguda tela, preencha apenas o IP do *Server* com o IP do *container* e ative a opção "Create new cluster":
 
-    ![Primeiro nó - Segunda Tela](/assets/no1_tela2.png)
+    ![Primeiro nó - Segunda Tela](/assets/no1_tela2.png)<br>Figura 1 - Configurando o primeiro nó
 
 4. Clique em *Next* e reinicie o servidor.
 
@@ -166,7 +166,7 @@ Pronto! Temos um *Cluster* local do RavenDB com apenas um servidor (nó) nele.
 
 > Antes de mais nada, é necessário uma licença do RavenDB para poder criar um *cluster*. Obtenha uma licença grátis de desenvolvedor, dentro do *studio* do RavenDB mesmo, indo em *notifications > get a license*. Preencha corretamente seus dados e selecione a licença de *developer*. Em alguns minutos a mesma será enviada para o e-mail cadastrado, copie a licença, vá em *notifications > register* e cole. 
 
-![Licença](/assets/license.png)
+![Licença](/assets/license.png)<br>Figura 2 - Adquirindo uma licença *free*
 
 Tendo registrado a licença, podemos agora adicionar os nós criados ao nosso *Cluster*.
 
@@ -186,7 +186,7 @@ Tendo registrado a licença, podemos agora adicionar os nós criados ao nosso *C
 
 8. Clique em "Test Connection" para assegurar que a conexão está correta e adicione o nó ao *Cluster*.
 
-    ![Add node](/assets/add_node.png)
+    ![Add node](/assets/add_node.png)<br>Figura 3 - Adicionando um novo nó ao *Cluster*
 
 9. Repita os mesmos passos para os outros nós que desejar adicionar ao *Cluster*.
 
@@ -194,46 +194,9 @@ Tendo registrado a licença, podemos agora adicionar os nós criados ao nosso *C
 
 11. Ao final, o *Cluster* deve ficar parecido com o seguinte:
 
-    ![Final topology](/assets/final_topology.png)
+    ![Final topology](/assets/final_topology.png)<br>Figura 4 - Topologia do *Cluster*
 
 E então temos um *cluster* com três nós pronto para os testes.
-
-## Executando os testes
-
-Os testes serão realizados no *cluster* descrito acima, rodando em uma máquina com as seguintes configurações:
-
->I5 3570K @3.8Ghz<br>
-8gb ddr3<br>
-12gb ssd<br>
-Linux Mint 19.1 - Cinnamon<br>
-
-Configuração por nó:
-> 2 Cores @3.8Ghz<br>
-512mb ddr3<br>
-12gb ssd<br>
-ravendb/ravendb:4.2.1
-
-Configuração do cluster:
-> 3 nós<br>
-fator de replicação: 3<br>
-nível de consistência: quórum (n/2 + 1)*<br>
-
-<sub>* O RavenDB utiliza por padrão o algoritmo de quórum Raft. Não encontrei na documentação como alterar as configurações do algoritmo de quórum. Por padrão, ele está setado como (n/2)+1 nós, então os testes serão executados com essa configuração.<br>
-Ref: https://ravendb.net/docs/article-page/4.2/python/glossary/raft-algorithm</sub>
-
-### Falha nos nós e eleição do líder
-
-Explain what these tests test and why
-
-```
-Give an example
-```
-
-### Populando o banco com amostras aleatórias
-
-### Falha nos nós e recuperação de informação
-
-### Testes --
 
 ## Autores
 

@@ -37,7 +37,7 @@ Primeiro, vamos desconectar o nó A, que é o atual líder. Essa etapa pode vari
 Volte para o *browser*, agora o nó A foi desconectado e não é possível acessá-lo pelo endereço http://172.17.0.2:8080. <br>
 Acesse, então, o nó B: http://172.17.0.3:8080. O resultado deve ser algo parecido com o seguinte:
 
-![Topologia com A off](/assets/A_off.png)<br>Figura 5 - Topologia com novo líder e nó A desconectado
+![Topologia com A off](/assets/A_off.png)<br>Figura 1 - Topologia com novo líder e nó A desconectado
 
 Como estamos rodando o *Cluster* locamelmente, a eleição do novo líder é quase instantânea, mas, é possível acessar a página de logs em *Cluster > Admin logs* e ver, no meio do monte de erros de falha de conexão, que assim que a conexão com A foi perdida (*timeout*) o nó B iniciou um quórum de eleição de novo líder.
 
@@ -56,7 +56,7 @@ Continuando com testes básicos, agora iremos desconectar dois nós e ver o que 
 
 Agora, temos um cenário como abaixo:
 
-![B e C off](/assets/B_C_off.png)<br>Figura 6 - Topologia com apenas um nó conectado
+![B e C off](/assets/B_C_off.png)<br>Figura 2 - Topologia com apenas um nó conectado
 
 O nó A aparentemente está 'travado' na votação, mas, na verdade, ele está continuadamente mandando requisições de votação para a eleição de um novo líder aos nós B e C, porém, como ambos estão desconectados e não respondem, o nó A não sabe o que fazer.<br>
 Isso ocorre porque o quórum do RavenDB é baseado na maioria (n/2 + 1), ou seja, são necessários dois nós responderem, nesse caso, para que seja tomada uma ação. Veremos mais a frente como esse mesmo cenário se comporta para requisições de leitura/escrita.
@@ -66,11 +66,11 @@ Isso ocorre porque o quórum do RavenDB é baseado na maioria (n/2 + 1), ou seja
 Inicie novamente todos os nós com o comando <b>docker start</b>.<br>
 O primeiro passo é criar nosso banco de dados. Para isso, vá em *Databases > New Database*. Mantenha as configurações padrão e o fator de replicação em 3.
 
-![Criando novo bd](/assets/new_db.png)<br>Figura 7 - Criando um novo banco de dados
+![Criando novo bd](/assets/new_db.png)<br>Figura 3 - Criando um novo banco de dados
 
 Se tudo ocorreu bem, o resultado deve ser o seguinte:
 
-![Novo bd](/assets/bd_pmd.png)<br>Figura 8 - Banco de dados criado e sincronizado com o *Cluster*
+![Novo bd](/assets/bd_pmd.png)<br>Figura 4 - Banco de dados criado e sincronizado com o *Cluster*
 
 ### Teste 1 - Beta
 
@@ -93,11 +93,11 @@ A primeira execução de testes é linear, então na linha `27 - batch_job (data
 Como esse primeiro teste foi apenas uma experiência, deixei passar muita coisa, pois o RavenDB apaga os logs de tempo em tempo e não é possível fazer download das métricas ou acessar o fonte das mesmas (o que é bem bizarro). Aparentemente as métricas são mantidas apenas localmente (no *browser* de quem acessa) e não no servidor, o que dificulta muito a coleta das métricas.<br>
 <sub>Ref: https://ravendb.net/docs/article-page/4.2/csharp/server/administration/statistics</sub>
 
-#### Métricas teste 1
+#### Métricas teste 1 - populando o banco
 
 Após a execução completar, ~14500 documentos foram inseridos.
 
-CLIENTE
+##### CLIENTE
 
     TEMPO POR REQUISIÇÃO (LATÊNCIA)
         MÉDIA:      0.03432780481207s
@@ -113,8 +113,7 @@ CLIENTE
     REQUISIÇÕES SUCEDIDAS:      14500
 
 
-
-SERVIDOR - NÓ B (Líder)<br>
+##### SERVIDOR - NÓ B (Líder)<br>
 <sub>O RavenDB não salva e eu não printei nesse teste - mas lembro dos seguintes números</sub>
 
     REQUISIÇÕES RECEBIDAS:  14500
@@ -123,9 +122,74 @@ SERVIDOR - NÓ B (Líder)<br>
     THROUGHPUT (WRITE):     20/s ~ 37/s 
     THROUGHPUT (READ):      0/s
 
-![Tempo de resposta para cada requisição](/results/teste1_tempo_por_req.png)<br>Figura 1 - Gráfico com o tempo de resposta, medido no cliente, por cada requisição
+![Tempo de resposta para cada requisição](/results/teste1_tempo_por_req.png)<br>Figura 5 - Gráfico com o tempo de resposta, medido no cliente, por cada requisição
+
+##### CLUSTER (BD)
+
+                    NÓ A            NÓ B            NÓ C
+    DISK USED       912.31MB        912.56MB        912.43MB
+    DOCUMENTS       14532           14532           14532
 
 ### Falha nos nós e recuperação de informação
+
+Vamos testar agora o que acontece no caso de um nó falhar completamente e precisar ser substituído por outro nó.<br>
+Para isso, iremos matar um *container* e removê-lo do disco e, em seguida, subir um novo *container* com as mesmas especificações e checar a sincronização.
+
+<sub>Obs: Primeiro, vou remover alguns documentos do banco, pois inserindo 14.500 documentos ocupou mais espaço no disco do que eu esperava e estou tendo alguns problemas! :p </sub>
+
+Faremos um script em Python para isso também e pegaremos algumas métricas!
+
+#### Métricas teste 1 - deletando 4.500 documentos
+
+A princípio, tentei deletar os documentos criando uma *thread* para cada requisição. Mas deu problema de exceção do Python e não consegui resolver, então executei o código sequencialmente mesmo.
+
+Após executar o código `/bin/delete.py`:
+
+##### CLIENTE
+
+    TEMPO POR REQUISIÇÃO (LATÊNCIA)
+        MÉDIA:      0.029972391446432s
+        MEDIANA:    0.029481291770935s
+        MAX:        0.127013206481934s
+        MIN:        0.011135578155518s
+        DESVIO:     0.009958278400284s
+
+    TEMPO TOTAL DAS REQUISIÇÕES:            134.875761508942s
+    TEMPO DE EXECUÇÃO TOTAL DO ALGORITMO:   N/A
+
+    REQUISIÇÕES ENVIADAS:       4500
+    REQUISIÇÕES SUCEDIDAS:      4500
+
+
+##### SERVIDOR - NÓ B (Líder)<br>
+
+    REQUISIÇÕES RECEBIDAS:   N/A
+    REQUISIÇÕES SUCEDIDAS:   N/A
+
+![Tempo de resposta para cada requisição - delete](/results/teste1_tempo_por_req_del.png)<br>Figura 6 - Gráfico com o tempo de resposta, medido no cliente, por cada requisição - *delete*
+
+##### CLUSTER (BD)
+
+                    NÓ A            NÓ B            NÓ C
+    DISK USED       656.56MB        656.31MB        656.47MB
+    DOCUMENTS       10140           10140           10140
+
+Não consegui captar erros nos logs do RavenDB, mas está estranho o número de documentos restantes no banco. Supondo que todas operações de deletar um documento fossem sucedidas, esperava-se 10032 documentos no banco. Como o RavenDB utiliza um algoritmo diferente para realizar a operação de deletar documentos, talvez alguns documentos dentro do banco possuam metadados sobre os que foram deletados, e por isso foram gerados mais documentos, porque o RavenDB marca com *tombstones* os documentos deletados. Mas é apenas uma suposição, porque não consegui encontrar referências que comprovassem o que houve, ou se ocorreu algum erro de fato.
+
+Para a minha decepção, a quantidade de disco usada pelos *containers* do RavenDB não diminuiu. Enquanto as operações de *delete* estavam acontecendo, o tamanho total do banco diminuiu, mas, ao fim das operações, voltou ao tamanho que estava ~900mb.<br>
+Cada nó possui 512mb de arquivos temporários que não consegui descobrir o que é, já que a documentação do RavenDB é bem fraca. Imagino que sejam *backups* automáticos para a recuperação dos dados. Talvez expirem depois de algum tempo ou reiniciando todo o *Cluster*.<br>
+<sub>Ref: https://ravendb.net/docs/article-page/4.1/csharp/server/storage/directory-structure</sub> 
+
+
+
+
+
+
+
+
+
+
+
 
 ### Testes --
 

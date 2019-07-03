@@ -10,13 +10,13 @@ import string
 
 from pyravendb.store import document_store
 
-NUM_READ_THREADS = 80
-NUM_WRITE_THREADS = 20
-TIME_STRESS = 90
+NUM_READ_THREADS = 16
+NUM_WRITE_THREADS = 4
+TIME_STRESS = 10
 
 NUM_TEST = 0
 
-URLS = ["http://172.17.0.2:8080", "http://172.17.0.3:8080", "http://172.17.0.4:8080"]
+URLS = ["http://172.17.0.1:8080"]
 DATABASE = "pmd"
 
 class Agregado (object):
@@ -38,6 +38,8 @@ def doc_read ():
     atual = time.time()
     i = 0
 
+    single_doc_log = ""
+
     while (atual - start) < TIME_STRESS:
         start_doc = time.time()
 
@@ -50,8 +52,7 @@ def doc_read ():
 
         interval_doc = end_doc - start_doc
 
-        with open ("../logs/stress_single_doc_read_" + str(NUM_TEST) + ".csv", "a+") as fopen:
-            fopen.write(str(NUM_TEST) + "\t" + str(interval_doc) + "\n")
+        single_doc_log += str(NUM_TEST) + "\t" + str(interval_doc) + "\n"
 
         i += 1
         atual = time.time()
@@ -59,6 +60,9 @@ def doc_read ():
     end = time.time()
 
     interval = end - start
+
+    with open ("../logs/stress_single_doc_read_" + str(NUM_TEST) + ".csv", "a+") as fopen:
+        fopen.write(str(single_doc_log))
 
     with open ("../logs/stress_batch_read_" + str(NUM_TEST) + ".csv", "a+") as fopen:
         fopen.write(str(NUM_TEST) + "\t" + str(i) + "\t" + str(interval) + "\n")
@@ -75,6 +79,8 @@ def doc_update ():
     atual = time.time()
     i = 0
     
+    single_doc_log = ""
+
     while (atual - start) < TIME_STRESS:
         start_doc = time.time()
 
@@ -95,8 +101,7 @@ def doc_update ():
 
         interval_doc = end_doc - start_doc
 
-        with open ("../logs/stress_single_doc_write_" + str(NUM_TEST) + ".csv", "a+") as fopen:
-            fopen.write(str(NUM_TEST) + "\t" + str(interval_doc) + "\n")
+        single_doc_log += str(NUM_TEST) + "\t" + str(interval_doc) + "\n"
 
         i += 1
         atual = time.time()
@@ -104,6 +109,9 @@ def doc_update ():
     end = time.time()
 
     interval = end - start
+
+    with open ("../logs/stress_single_doc_write_" + str(NUM_TEST) + ".csv", "a+") as fopen:
+        fopen.write(str (single_doc_log))
 
     with open ("../logs/stress_batch_write_" + str(NUM_TEST) + ".csv", "a+") as fopen:
         fopen.write(str(NUM_TEST) + "\t" + str(i) + "\t" + str(interval) + "\n")        

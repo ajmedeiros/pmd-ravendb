@@ -72,7 +72,7 @@ Se tudo ocorreu bem, o resultado deve ser o seguinte:
 
 ![Novo bd](/assets/bd_pmd.png)<br>Figura 4 - Banco de dados criado e sincronizado com o *Cluster*
 
-### Teste 1 - Beta
+### Teste 0 - Beta
 
 #### Populando o banco com o Python
 
@@ -93,7 +93,7 @@ A primeira execução de testes é linear, então na linha `27 - batch_job (data
 Como esse primeiro teste foi apenas uma experiência, deixei passar muita coisa, pois o RavenDB apaga os logs de tempo em tempo e não é possível fazer download das métricas ou acessar o fonte das mesmas (o que é bem bizarro). Aparentemente as métricas são mantidas apenas localmente (no *browser* de quem acessa) e não no servidor, o que dificulta muito a coleta das métricas.<br>
 <sub>Ref: https://ravendb.net/docs/article-page/4.2/csharp/server/administration/statistics</sub>
 
-#### Métricas teste 1 - populando o banco
+#### Métricas teste 0 - populando o banco
 
 Após a execução completar, ~14500 documentos foram inseridos.
 
@@ -113,6 +113,9 @@ Após a execução completar, ~14500 documentos foram inseridos.
     REQUISIÇÕES SUCEDIDAS:      14500
 
 
+![Tempo de resposta para cada requisição](/results/teste1_tempo_por_req.png)<br>Figura 5 - Gráfico com o tempo de resposta, medido no cliente, por cada requisição
+
+
 ##### SERVIDOR - NÓ B (Líder)<br>
 <sub>O RavenDB não salva e eu não printei nesse teste - mas lembro dos seguintes números</sub>
 
@@ -121,8 +124,6 @@ Após a execução completar, ~14500 documentos foram inseridos.
 
     THROUGHPUT (WRITE):     20/s ~ 37/s 
     THROUGHPUT (READ):      0/s
-
-![Tempo de resposta para cada requisição](/results/teste1_tempo_por_req.png)<br>Figura 5 - Gráfico com o tempo de resposta, medido no cliente, por cada requisição
 
 ##### CLUSTER (BD)
 
@@ -139,7 +140,7 @@ Para isso, iremos matar um *container* e removê-lo do disco e, em seguida, subi
 
 Faremos um script em Python para isso também e pegaremos algumas métricas!
 
-#### Métricas teste 1 - deletando 4.500 documentos
+#### Métricas teste 0 - deletando 4.500 documentos
 
 A princípio, tentei deletar os documentos criando uma *thread* para cada requisição. Mas deu problema de exceção do Python e não consegui resolver, então executei o código sequencialmente mesmo.
 
@@ -160,38 +161,72 @@ Após executar o código `/bin/delete.py`:
     REQUISIÇÕES ENVIADAS:       4500
     REQUISIÇÕES SUCEDIDAS:      4500
 
-
-##### SERVIDOR - NÓ B (Líder)<br>
-
-    REQUISIÇÕES RECEBIDAS:   N/A
-    REQUISIÇÕES SUCEDIDAS:   N/A
-
 ![Tempo de resposta para cada requisição - delete](/results/teste1_tempo_por_req_del.png)<br>Figura 6 - Gráfico com o tempo de resposta, medido no cliente, por cada requisição - *delete*
 
 ##### CLUSTER (BD)
 
                     NÓ A            NÓ B            NÓ C
     DISK USED       656.56MB        656.31MB        656.47MB
+    DB SIZE         328.12MB        328.06MB        328.06MB
     DOCUMENTS       10140           10140           10140
 
-Não consegui captar erros nos logs do RavenDB, mas está estranho o número de documentos restantes no banco. Supondo que todas operações de deletar um documento fossem sucedidas, esperava-se 10032 documentos no banco. Como o RavenDB utiliza um algoritmo diferente para realizar a operação de deletar documentos, talvez alguns documentos dentro do banco possuam metadados sobre os que foram deletados, e por isso foram gerados mais documentos, porque o RavenDB marca com *tombstones* os documentos deletados. Mas é apenas uma suposição, porque não consegui encontrar referências que comprovassem o que houve, ou se ocorreu algum erro de fato.
+Não consegui captar erros nos logs do RavenDB, mas está estranho o número de documentos restantes no banco. Supondo que todas operações de deletar um documento fossem bem sucedidas, esperava-se 10032 documentos no banco. Como o RavenDB utiliza um algoritmo diferente para realizar a operação de deletar documentos, talvez alguns documentos dentro do banco possuam metadados sobre os que foram deletados, e por isso foram gerados mais documentos, porque o RavenDB marca com *tombstones* os documentos deletados. Mas é apenas uma suposição, porque não consegui encontrar referências que comprovassem o que houve, ou se ocorreu algum erro de fato.
 
 Para a minha decepção, a quantidade de disco usada pelos *containers* do RavenDB não diminuiu. Enquanto as operações de *delete* estavam acontecendo, o tamanho total do banco diminuiu, mas, ao fim das operações, voltou ao tamanho que estava ~900mb.<br>
 Cada nó possui 512mb de arquivos temporários que não consegui descobrir o que é, já que a documentação do RavenDB é bem fraca. Imagino que sejam *backups* automáticos para a recuperação dos dados. Talvez expirem depois de algum tempo ou reiniciando todo o *Cluster*.<br>
 <sub>Ref: https://ravendb.net/docs/article-page/4.1/csharp/server/storage/directory-structure</sub> 
 
+#### Dashboard dos servidores (nós)
+
+![Dashboard B](/results/del_dash_B_3.png)<br>Figura 7 - *Dashboard* do nó B
+
+Nada de muito especial na *dashboard* do nó B. Como as requisições de *delete* foram sequenciais também, esse era o comportamento esperado.
 
 
+Nas *dashboards* dos nós A e C, não houveram requisições, pois acredito que o algoritmo do RavenDB priorize o nó líder, dado que todos os nós empatariam no *speed test* (balanceador selecionado para esse projeto - *fastest node*), pois possuem a mesma configuração. E como a comunicação entre os servidores é feita internamente, não é mostrado nos gráficos da *dashboard* como a troca de informações entre os nós é feita. Mas é possível ver as requisições por *batch* de dados nos *logs* do RavenDB.
 
+Porém, como é possível ver na figura a seguir, em um momento o nó A recebe algumas requisições. Acredito que, por um curto período de tempo, o nó B ficou sobrecarregado e o balanceador de carga jogou uma requisição para o nó A.
 
+![Dashboard A](/results/del_dash_A.png)<br>Figura 8 - *Dashboard* do nó A
 
+## Testes de estresse
 
+Com tudo pronto, agora rodaremos o que nos interessa, que é o teste de estresse do banco, nos permitindo colher as métricas do banco no seu uso extremo bem como verificar sua capacidade.
 
+Acredito que o código esteja legível, então não vou explicá-lo. Configure apenas as flags globais que estão em maiúsculo `URLS`, `DATABASE` etc.
 
+Aqui colocarei apenas as métricas - prints para os nós e estatísticas locais para o cliente.
 
+### Teste 1
 
+> Um pouco decepcionante, pois o nó líder não aguentou a carga e foram realizadas, em média, menos de duas operações por thread.<br>
+Para o próximo teste (teste - 2), atualizei a RAM do nó líder para 1024mb.
 
-### Testes --
+#### Cliente
+
+    Threads de leitura:     80
+    Threads de escrita:     20 
+
+    TEMPO POR REQUISIÇÃO LEITURA (LATÊNCIA)
+        MÉDIA:      0.03432780481207s
+        MEDIANA:    0.034312248229981s
+        MAX:        0.610070705413818s
+        MIN:        0.009292364120483s
+        DESVIO:     0.015870559451379s
+
+    REQUISIÇÕES ENVIADAS:       14500
+    REQUISIÇÕES SUCEDIDAS:      14500
+
+    TEMPO POR REQUISIÇÃO ESCRITA (LATÊNCIA)
+        MÉDIA:      0.03432780481207s
+        MEDIANA:    0.034312248229981s
+        MAX:        0.610070705413818s
+        MIN:        0.009292364120483s
+        DESVIO:     0.015870559451379s
+
+    REQUISIÇÕES ENVIADAS:       14500
+    REQUISIÇÕES SUCEDIDAS:      14500
+
 
 ## Autores
 

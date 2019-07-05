@@ -10,9 +10,9 @@ import string
 
 from pyravendb.store import document_store
 
-NUM_READ_THREADS = 16
-NUM_WRITE_THREADS = 4
-TIME_STRESS = 10
+NUM_READ_THREADS = 800
+NUM_WRITE_THREADS = 200
+TIME_STRESS = 900
 
 NUM_TEST = 0
 

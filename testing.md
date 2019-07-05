@@ -197,6 +197,28 @@ Acredito que o código esteja legível, então não vou explicá-lo. Configure a
 
 Aqui colocarei apenas as métricas - prints para os nós e estatísticas locais para o cliente.
 
+### Consultas utilizadas
+
+#### Consulta de leitura (*query*)
+
+```python
+query_random = "FROM Agregadoes WHERE Agregado.name >= \"" + str (random.choice(string.ascii_uppercase)) + "\" SELECT Agregado "
+
+query_result = list(session.query(object_type=Agregado).raw_query(query_random))
+```
+
+#### Consulta de escrita (*update*)
+
+```python
+with store.open_session() as session: 
+load_random = "agregadoes/" + str (1 + int (random.random() * 10000)) + "-B"
+load_result = session.load(load_random, object_type = Agregado)
+
+if isinstance(load_result, Agregado):
+    load_result.Agregado["about"] = randomString (int (random.random() * 200)) + "\r\n"
+    session.save_changes()
+```
+
 ### Teste 1
 
 > Um pouco decepcionante, pois o nó líder não aguentou a carga e foram realizadas, em média, menos de duas operações por thread.<br>
@@ -250,6 +272,7 @@ Pela figura fica claro que quanto mais sobrecarregado o *Cluster*, dado o númer
 
 Para esse caso, imagino que as requisições de update só iniciaram depois das de leitura, quando as de leitura já estavam no final, por gargalo tanto da máquina quanto do nó líder. Depois de um tempo, conforme as leituras foram terminando, o tempo de resposta ficou muito baixo e só foi aumentar no final, quando imagino que também tenha acumulado algumas requisições de update.
 
+--------------------
 
 ### Teste 2
 
@@ -266,9 +289,139 @@ Outro teste, todos os nós com 1024mb de memória e sem configurar balanceador. 
 
 O mesmo problema persiste. Dessa vez o nó A estourou a memória (1024mb) e parou de responder. Porém, as requisições não estão sendo redistribuídas aos nós B ou C.
 
-Apenas com o intuito de colher dados, reinicie todos os *containers* e realizei um último teste com menos threads.
+------------
 
----------------------------
+### Teste 3
+
+Apenas com o intuito de colher dados, reiniciei todos os *containers* e realizei um último teste com menos threads e liberei mais memória para os *containers*.
+
+    Nó A (líder)
+        Número de vCPUs: 4
+        Memória: 2000mb
+
+    Nó B
+        Número de vCPUs: 2
+        Memória: 1500mb
+
+    Nó C
+        Número de CPUs: 2
+        Memória: 1500mb            
+
+    ---------------------------------------------
+
+    LOGS DO CLIENTE (Python)
+
+    Tempo de execução:      318s
+    Threads de leitura:     16
+    Threads de escrita:     4    
+        
+    TEMPO POR REQUISIÇÃO LEITURA (LATÊNCIA)
+        MÉDIA:      12.5423633009576s
+        MEDIANA:    11.3065989017487s
+        MAX:        31.3795788288116s
+        MIN:        0.560620069503784s
+        DESVIO:     8.16045930903834s
+
+    REQUISIÇÕES ENVIADAS:       391
+    REQUISIÇÕES SUCEDIDAS:      391
+    FALHAS:                     0
+
+![Stress 1 - Read](/results/stress3_read.png)<br>Figura 11 - Latência por *query* do teste 3
+
+    TEMPO POR REQUISIÇÃO ESCRITA (LATÊNCIA)
+        MÉDIA:      1.54696673405798s
+        MEDIANA:    1.4964097738266s
+        MAX:        3.87301421165466s
+        MIN:        0.05821967124939s
+        DESVIO:     0.636615012660566s
+
+    REQUISIÇÕES ENVIADAS:       788
+    REQUISIÇÕES SUCEDIDAS:      760
+    FALHAS:                     28
+
+![Stress 1 - Write](/results/stress3_write.png)<br>Figura 12 - Latência por *update* do teste 3
+
+-----------------------
+
+    LOGS DO CLUSTER (RavenDB/databases/pmd/metrics)
+
+    NÓ A
+
+    "PutsPerSec":{  
+         "Current":2.0,
+         "Count":907,
+         "MeanRate":0.7,
+         "OneMinuteRate":2.5,
+         "FiveMinuteRate":2.5,
+         "FifteenMinuteRate":1.0
+    }
+
+![Stress 3 - Nó A1](/results/teste3-dashA1.png)<br>Figura 13 - Dashboard do nó A
+![Stress 3 - Nó A2](/results/teste3-dashA2.png)<br>Figura 14 - Dashboard do nó A
+![Stress 3 - Nó A2](/results/teste3-dashA3.png)<br>Figura 15 - Dashboard do nó A
+
+-----------------------
+
+    NÓ B
+
+    "Requests":{  
+      "RequestsPerSec":{  
+         "Current":6.0,
+         "Count":2682,
+         "MeanRate":2.2,
+         "OneMinuteRate":6.7,
+         "FiveMinuteRate":6.4,
+         "FifteenMinuteRate":3.0
+      },
+      "ConcurrentRequestsCount":0,
+      "AverageDuration":1038.2963722584097
+    }
+
+    "PutsPerSec":{  
+         "Current":2.0,
+         "Count":905,
+         "MeanRate":0.8,
+         "OneMinuteRate":2.5,
+         "FiveMinuteRate":2.5,
+         "FifteenMinuteRate":1.0
+      }
+
+![Stress 3 - Nó B1](/results/teste3-dashB1.png)<br>Figura 16 - Dashboard do nó B
+![Stress 3 - Nó B2](/results/teste3-dashB2.png)<br>Figura 17 - Dashboard do nó B
+![Stress 3 - Nó B3](/results/teste3-dashB3.png)<br>Figura 18 - Dashboard do nó B
+
+------------------
+
+    NÓ C
+
+      "PutsPerSec":{  
+         "Current":2.0,
+         "Count":901,
+         "MeanRate":0.8,
+         "OneMinuteRate":2.5,
+         "FiveMinuteRate":2.5,
+         "FifteenMinuteRate":1.0
+      }
+
+![Stress 3 - Nó C1](/results/teste3-dashC1.png)<br>Figura 19 - Dashboard do nó C
+![Stress 3 - Nó C2](/results/teste3-dashC2.png)<br>Figura 20 - Dashboard do nó C
+![Stress 3 - Nó C3](/results/teste3-dashC3.png)<br>Figura 21 - Dashboard do nó C
+
+
+-----------
+
+### Teste 4
+
+Mesmas configurações do teste 3, porém com 800 threads de leitura e 200 de escrita: falha.<br>
+Sobrecarrega a memória dos nós e os mesmos param de responder.
+
+        self, "Failed to establish a new connection: %s" % e)
+        urllib3.exceptions.NewConnectionError: <urllib3.connection.HTTPConnection object at 0x7fa47c6d97f0>:
+        Failed to establish a new connection: [Errno 24] Too many open files
+
+![Stress 4 - Dash A](/results/dashA-quebrado.png)<br>Figura 22 - Dashboard do nó A
+![Stress 4 - Dash B](/results/dashB-quebrado.png)<br>Figura 23 - Dashboard do nó B
+![Stress 4 - Dash C](/results/dashC-quebrado.png)<br>Figura 24 - Dashboard do nó C
 
 ## Autores
 
